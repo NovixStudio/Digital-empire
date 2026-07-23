@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>APP EMPIRE — Digital Tycoon</title>
+<meta name="theme-color" content="#bf5af2" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+<meta name="apple-mobile-web-app-title" content="App Empire" />
+<meta name="description" content="App Empire — Digital Tycoon: постройте свою империю мобильных приложений" />
+<link rel="manifest" id="pwa-manifest-link" />
+<link rel="icon" id="pwa-icon-link" />
+<link rel="apple-touch-icon" id="pwa-apple-icon-link" />
+<link rel="stylesheet" href="style-apps.css" />
+</head>
+<body>
+
+<div id="bg-blobs"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div><div class="blob b4"></div></div>
+
+<!-- NEW GAME SETUP (name + difficulty), shown only when starting a fresh game -->
+<div id="setup-screen" class="hidden">
+  <div class="setup-card">
+    <div class="setup-title" data-i18n="setup.title">Прежде чем начать</div>
+    <div class="setup-sub" data-i18n="setup.sub">Представьтесь и выберите сложность — это можно будет увидеть, но не поменять позже</div>
+    <div class="setup-label" data-i18n="setup.namelabel">Как вас зовут?</div>
+    <input id="setup-name-input" class="setup-name-input" maxlength="18" placeholder="Игрок" />
+    <div class="setup-label" data-i18n="setup.difflabel">Сложность</div>
+    <div class="diff-row" id="setup-diff-row"></div>
+    <button class="btn btn-cyan setup-start-btn" onclick="confirmSetup()" data-i18n="setup.start">🚀 Начать бизнес</button>
+  </div>
+</div>
+
+<!-- ENDING SCREEN (shown once, after the 3rd rebirth) -->
+<div id="ending-screen" class="hidden">
+  <div class="mm-blobs"><div class="blob b2"></div><div class="blob b4"></div></div>
+  <div class="mm-emoji">🏆</div>
+  <div class="mm-title" style="font-size:26px;" data-i18n="ending.title">Карьера завершена</div>
+  <div class="mm-tag" data-i18n="ending.tag">Три перерождения позади — это финал основной истории WEB EMPIRE</div>
+  <div id="ending-stats" style="width:100%;max-width:320px;margin:14px 0;"></div>
+  <div class="mm-buttons">
+    <button class="mm-btn mm-btn-play" onclick="continueEndless()" data-i18n="ending.endless">♾️ Играть в Endless-режиме</button>
+    <button class="mm-btn mm-btn-settings" onclick="document.getElementById('ending-screen').classList.add('hidden')" data-i18n="ending.continue">Продолжить как есть</button>
+  </div>
+</div>
+
+
+<div id="game-clock" class="game-clock"></div>
+<div id="starter-boost-badge" class="starter-boost-badge"></div>
+<div id="bankruptcy-banner" class="bankruptcy-banner" onclick="openRescueLoanModal()"></div>
+<div id="bankruptcy-gameover" class="bankruptcy-gameover"></div>
+
+<div id="app">
+  <header id="app-header">
+    <button class="header-home-btn" onclick="location.href='index.html'" title="К выбору режима">🏠</button>
+    <div class="header-right">
+      <span class="rank-badge" id="header-rank">🥉 Новичок</span>
+      <span class="header-cash num" id="header-cash" data-flash="1">$0</span>
+    </div>
+  </header>
+  <div id="ticker-wrap"><div id="ticker"></div></div>
+
+  <div id="main-row">
+    <div id="content">
+
+      <!-- DASHBOARD -->
+      <section class="screen active" id="screen-dash">
+        <h1 class="page-title">Обзор</h1>
+        <p class="page-sub" id="dash-sub">День 1 · добро пожаловать в WEB EMPIRE</p>
+
+
+        <div class="glass" id="worth-card">
+          <div class="worth-lbl" data-i18n="dash.networth">Чистые активы</div>
+          <div class="worth-val num c-green" id="worth-val">$0</div>
+          <div class="worth-delta num" id="worth-delta">+$0/сек</div>
+          <svg id="worth-svg" viewBox="0 0 300 56" preserveAspectRatio="none"></svg>
+        </div>
+
+        <div class="stat-strip">
+          <div class="stat-box glass"><div class="lbl" data-i18n="dash.cash">Наличные</div><div class="val num c-green" id="stat-cash">$0</div></div>
+          <div class="stat-box glass"><div class="lbl" data-i18n="dash.incomepersec">Доход/сек</div><div class="val num c-green" id="stat-income">$0</div></div>
+          <div class="stat-box glass"><div class="lbl" data-i18n="dash.portfolio">Портфель</div><div class="val num c-violet" id="stat-stocks">$0</div></div>
+          <div class="stat-box glass"><div class="lbl" data-i18n="dash.reputation">Репутация</div><div class="val num c-amber" id="stat-rep">0</div></div>
+        </div>
+
+        <button class="quest-chip" id="quest-chip" onclick="openDailyQuestsModal()">📋 Задания дня: 0/3</button>
+
+        <div class="card glass" id="next-unlock-card" style="margin:12px 0;display:none;">
+          <div class="card-row">
+            <div class="card-icon" id="next-unlock-icon">🔓</div>
+            <div style="flex:1">
+              <div class="card-title" id="next-unlock-title">—</div>
+              <div class="card-sub" id="next-unlock-sub">—</div>
+            </div>
+          </div>
+          <div class="progress-bar"><div id="next-unlock-progress" style="width:0%"></div></div>
+        </div>
+
+        <div class="section-title" id="events-section" style="display:none;" data-i18n="dash.activeevents">⚡ Активные события</div>
+        <div id="events-card" style="margin-bottom:16px;"></div>
+
+        <!-- Everything below is genuinely useful but not needed at a glance
+             every time you open the dashboard, so it's tucked behind one
+             tap instead of stacking a dozen cards before you even reach
+             "Лента событий". Same progressive-disclosure pattern as the
+             "Ещё: продвинутые системы" toggle in the site view — nothing
+             here is removed, just collapsed by default. -->
+        <button class="sv-advanced-toggle" id="dash-advanced-toggle" onclick="toggleDashAdvanced()">
+          <span id="dash-advanced-toggle-ic">▾</span> <span data-i18n="dash.moretoggle">Ещё: ранг, перерождение, финансы, история</span>
+          <span class="badge-dot" id="dash-advanced-badge" style="display:none;position:static;margin-left:6px;"></span>
+        </button>
+        <div id="dash-advanced-wrap" style="display:none;">
+          <div class="card glass" id="rank-card" style="margin-bottom:16px;">
+            <div class="card-row">
+              <div class="card-icon" id="rank-icon">🥉</div>
+              <div style="flex:1">
+                <div class="card-title" id="rank-title">Новичок</div>
+                <div class="card-sub" id="rank-next" data-i18n="dash.nextrank">До следующего ранга: —</div>
+              </div>
+            </div>
+            <div class="progress-bar"><div id="rank-progress" style="width:0%"></div></div>
+          </div>
+
+          <div class="card glass" id="rebirth-card" style="margin-bottom:16px;"></div>
+
+          <div class="card glass" id="season-card" style="margin-bottom:16px;cursor:pointer;" onclick="openSeasonEventModal()">
+            <div class="card-row">
+              <div class="card-icon">🎆</div>
+              <div style="flex:1">
+                <div class="card-title" data-i18n="dash.seasonevent">Событие недели</div>
+                <div class="card-sub" data-i18n="dash.loading">Загрузка...</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass fin-card" id="finance-card" style="margin-bottom:16px;cursor:pointer;" onclick="openFinanceDetailModal()"></div>
+
+          <div class="card glass" id="tax-card" style="margin-bottom:16px;cursor:pointer;" onclick="openTaxModal()">
+            <div class="card-row">
+              <div class="card-icon">🧾</div>
+              <div style="flex:1">
+                <div class="card-title" data-i18n="dash.taxes">Налоги</div>
+                <div class="card-sub" id="tax-card-sub" data-i18n="dash.loading">Загрузка...</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card glass" id="payroll-card" style="margin-bottom:16px;cursor:pointer;" onclick="openPayrollModal()">
+            <div class="card-row">
+              <div class="card-icon">💸</div>
+              <div style="flex:1">
+                <div class="card-title">Зарплата команды</div>
+                <div class="card-sub" id="payroll-card-sub">Загрузка...</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="section-title" data-i18n="dash.quickactions">Быстрые действия</div>
+          <div class="card glass">
+            <div class="card-row">
+              <div class="card-icon">🚀</div>
+              <div style="flex:1">
+                <div class="card-title">Прокачать приложения</div>
+                <div class="card-sub">Выберите, что именно улучшить</div>
+              </div>
+            </div>
+            <div class="btn-row"><button class="btn btn-cyan btn-block" onclick="nav('sites')">Перейти к приложениям</button></div>
+          </div>
+          <div class="card glass">
+            <div class="card-row">
+              <div class="card-icon">🏆</div>
+              <div style="flex:1">
+                <div class="card-title" data-i18n="dash.leaderboard">Рейтинг конкурентов</div>
+                <div class="card-sub" data-i18n="dash.leaderboardsub">Сравните свою империю с локальными NPC</div>
+              </div>
+            </div>
+            <div class="btn-row"><button class="btn btn-outline btn-block" onclick="openLeaderboardModal()" data-i18n="dash.openleaderboard">Открыть рейтинг</button></div>
+          </div>
+
+          <div class="section-title" data-i18n="dash.eventfeed">Лента событий</div>
+          <div id="dash-log" class="card glass"></div>
+        </div>
+      </section>
+
+      <!-- SITES -->
+      <section class="screen" id="screen-sites">
+        <h1 class="page-title">Мои приложения</h1>
+        <p class="page-sub">Прокачивайте отдельно дизайн, трафик, монетизацию и инфраструктуру каждого приложения</p>
+        <div class="btn-row" style="margin-bottom:14px;"><button class="btn btn-outline btn-block" onclick="openRecipeBookModal()">📖 Книга комбо-приложений</button></div>
+        <div id="sites-list"></div>
+      </section>
+
+      <!-- MARKET -->
+      <section class="screen" id="screen-market">
+        <h1 class="page-title">Биржа</h1>
+        <p class="page-sub" data-i18n="market.sub">Акции и криптовалюта. Цены меняются каждую секунду.</p>
+        <div class="stat-strip" style="grid-template-columns:1fr 1fr;">
+          <div class="stat-box glass"><div class="lbl" data-i18n="market.portfoliovalue">Стоимость портфеля</div><div class="val num c-violet" id="mkt-value">$0</div></div>
+          <div class="stat-box glass"><div class="lbl" data-i18n="market.cash">Свободные средства</div><div class="val num c-green" id="mkt-cash">$0</div></div>
+        </div>
+        <div class="seg-control glass">
+          <button class="seg-btn active" id="tab-stock" onclick="setMarketTab('stock')" data-i18n="market.stocks">📈 Акции</button>
+          <button class="seg-btn" id="tab-crypto" onclick="setMarketTab('crypto')" data-i18n="market.crypto">🪙 Крипто</button>
+        </div>
+        <div class="card glass" id="loan-card" style="margin-bottom:12px;"></div>
+        <div class="card glass" id="stocks-card"></div>
+      </section>
+
+      <!-- ESTATE + GARAGE/LUXURY (merged: both are "buy items for an income-boost %") -->
+      <section class="screen" id="screen-estate">
+        <h1 class="page-title">Активы</h1>
+        <p class="page-sub" data-i18n="estate.sub">Недвижимость и статус-символы — оба дают постоянный буст к доходу</p>
+        <div class="subtab-bar" role="tablist">
+          <button class="subtab active" id="subtab-estate" onclick="setAssetsTab('estate')" data-i18n="estate.realestate">🏢 Недвижимость</button>
+          <button class="subtab" id="subtab-garage" onclick="setAssetsTab('garage')" data-i18n="estate.status">🚗 Статус</button>
+        </div>
+        <div id="assets-panel-estate">
+          <div class="stat-strip" style="grid-template-columns:1fr;">
+            <div class="stat-box glass"><div class="lbl" data-i18n="estate.currentboost">Текущий буст дохода</div><div class="val num c-amber" id="estate-bonus">+0%</div></div>
+          </div>
+          <div id="estate-list"></div>
+        </div>
+        <div id="assets-panel-garage" style="display:none;">
+          <div class="stat-strip" style="grid-template-columns:1fr;">
+            <div class="stat-box glass"><div class="lbl" data-i18n="estate.reptoboost">Репутация → буст дохода</div><div class="val num c-amber" id="garage-bonus">0 → +0%</div></div>
+          </div>
+          <div id="garage-list"></div>
+        </div>
+      </section>
+
+      <!-- INBOX / NOTIFICATIONS — единая лента: задания, событие недели, активные события, достижения -->
+      <section class="screen" id="screen-inbox">
+        <h1 class="page-title">Уведомления</h1>
+        <p class="page-sub" data-i18n="inbox.sub">Всё, что требует внимания — в одном месте</p>
+        <div id="inbox-content"></div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="screen" id="screen-settings">
+        <h1 class="page-title">Настройки</h1>
+
+        <div class="subtab-bar" style="flex-wrap:wrap;">
+          <button class="subtab active" id="settingstab-sound" onclick="setSettingsTab('sound')" data-i18n="settings.tab.design">🎨 Дизайн</button>
+          <button class="subtab" id="settingstab-progress" onclick="setSettingsTab('progress')" data-i18n="settings.tab.progress">🏆 Прогресс</button>
+          <button class="subtab" id="settingstab-social" onclick="setSettingsTab('social')" data-i18n="settings.tab.social">👥 Сообщество</button>
+          <button class="subtab" id="settingstab-data" onclick="setSettingsTab('data')" data-i18n="settings.tab.data">💾 Данные</button>
+        </div>
+
+        <!-- Дизайн -->
+        <div id="settings-panel-sound">
+          <div class="card glass">
+            <div class="switch-row" style="border-bottom:none;"><span data-i18n="settings.eventnotif">Уведомления о событиях</span><div class="switch on" id="sw-notif" onclick="toggleSwitch('notif')"><div class="knob"></div></div></div>
+          </div>
+
+          <div class="section-title" data-i18n="settings.theme">🎨 Тема оформления</div>
+          <div class="card glass" style="padding:12px;">
+            <div id="theme-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:10px;"></div>
+          </div>
+
+          <div class="section-title" data-i18n="settings.lang">Язык / Language</div>
+          <div class="seg-control glass">
+            <button class="seg-btn" id="lang-ru-btn" onclick="setLanguage('ru')">🇷🇺 Русский</button>
+            <button class="seg-btn" id="lang-en-btn" onclick="setLanguage('en')">🇬🇧 English</button>
+          </div>
+        </div>
+
+        <!-- Прогресс -->
+        <div id="settings-panel-progress" style="display:none;">
+          <button class="btn btn-outline btn-block" id="achievements-btn" onclick="openAchievementsModal()" data-i18n="settings.achievements">🏆 Достижения</button>
+          <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="openDailyQuestsModal()" data-i18n="settings.dailyquests">📋 Задания дня</button>
+          <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="openStatsModal()" data-i18n="settings.stats">📊 Общая статистика</button>
+
+          <div class="card glass" id="prestige-toggles-card" style="display:none;margin-top:14px;">
+            <div class="switch-row" id="row-auto-hire" style="display:none;"><span data-i18n="settings.autohire">🤝 Авто-найм сотрудников</span><div class="switch" id="sw-auto-hire" onclick="togglePrestigeSwitch('autoHire')"><div class="knob"></div></div></div>
+            <div class="switch-row" id="row-auto-upgrade" style="display:none;border-bottom:none;"><span data-i18n="settings.autoupgrade">🤖 Авто-прокачка треков</span><div class="switch" id="sw-auto-upgrade" onclick="togglePrestigeSwitch('autoUpgrade')"><div class="knob"></div></div></div>
+          </div>
+
+          <div class="card glass" style="margin-top:14px;">
+            <div class="switch-row" style="border-bottom:none;flex-wrap:wrap;gap:4px;">
+              <span data-i18n="settings.pushnotif">🔔 Локальные уведомления</span>
+              <div class="switch" id="sw-push-notif" onclick="togglePushNotif()"><div class="knob"></div></div>
+              <p style="width:100%;color:var(--dim);font-size:11px;margin:4px 0 0;" data-i18n="settings.pushnotifsub">Напомнит, если стрик скоро сгорит или событие недели заканчивается — только пока приложение открыто в фоне (не после полного закрытия)</p>
+            </div>
+          </div>
+
+          <div class="section-title" data-i18n="settings.boosty">Boosty-подписка</div>
+          <div class="card glass boosty-card" id="boosty-card"></div>
+        </div>
+
+        <!-- Сообщество -->
+        <div id="settings-panel-social" style="display:none;">
+          <button class="btn btn-outline btn-block" onclick="openReferralModal()" data-i18n="settings.invitefriend">🎁 Пригласить друга</button>
+          <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="openShareCardModal()" data-i18n="settings.progresscard">🖼️ Карточка прогресса</button>
+          <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="openCompareModal()" data-i18n="settings.compare">🆚 Сравнить с другом</button>
+          <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="openCeoCustomizeModal()" data-i18n="settings.ceooffice">🎭 Кабинет CEO</button>
+        </div>
+
+        <!-- Данные -->
+        <div id="settings-panel-data" style="display:none;">
+          <button class="btn btn-outline btn-block" onclick="exportSave()" data-i18n="settings.exportsave">📤 Экспорт сохранения в файл</button>
+          <button class="btn btn-outline btn-block" style="margin-top:8px;" onclick="document.getElementById('import-save-input').click()" data-i18n="settings.importsave">📥 Импорт сохранения из файла</button>
+          <input type="file" id="import-save-input" accept="application/json,.json" style="display:none;" onchange="importSaveFile(this.files[0])">
+          <button class="btn btn-red btn-block" style="margin-top:8px;" onclick="confirmReset()" data-i18n="settings.resetprogress">🗑️ Сбросить прогресс</button>
+          <p class="page-sub" style="margin-top:10px;" id="save-info"><span class="save-dot" id="save-dot"></span><span data-i18n="settings.autosave">Автосохранение каждые 15 сек</span></p>
+          <p class="page-sub" id="version-tap" style="margin-top:14px;opacity:0.5;text-align:center;" onclick="tapVersion()">APP EMPIRE v1.0 (режим «Приложения»)</p>
+
+          <div id="devmode-card" class="card glass" style="display:none;margin-top:10px;border-color:var(--red);">
+            <div class="card-sub" style="margin-bottom:8px;color:var(--red);" data-i18n="settings.devmode">🛠️ Режим тестирования (dev)</div>
+            <div class="btn-row" style="flex-wrap:wrap;">
+              <button class="btn btn-outline" onclick="devGiveCash(1000000)">+$1,000,000</button>
+              <button class="btn btn-outline" onclick="devSkipDay()" data-i18n="settings.dev.skipday">⏭️ Пропустить день</button>
+              <button class="btn btn-outline" onclick="devGivePrestigePoints(50)" data-i18n="settings.dev.prestigepts">+50 очков перерождения</button>
+              <button class="btn btn-outline" onclick="devUnlockAutoManager()" data-i18n="settings.dev.automanager">🤖 Открыть авто-менеджер</button>
+              <button class="btn btn-outline" onclick="devMaxSites()" data-i18n="settings.dev.maxtracks">🌐 Макс. уровень всех треков</button>
+              <button class="btn btn-red" onclick="disableDevMode()" data-i18n="settings.dev.disable">Выключить dev-режим</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+
+    <div id="bottom-nav-wrap">
+      <nav id="bottom-nav">
+        <button class="nav-item active" data-screen="dash"><span class="ic">📊</span><span>Дашборд</span></button>
+        <button class="nav-item" data-screen="sites"><span class="ic">📱</span><span>Приложения</span></button>
+        <button class="nav-item" data-screen="market"><span class="ic">📈</span><span>Биржа</span></button>
+        <button class="nav-item" data-screen="estate"><span class="ic">🏢</span><span>Активы</span></button>
+        <button class="nav-item" data-screen="inbox"><span class="ic" style="position:relative;">🔔<span id="inbox-badge" class="badge-dot" style="display:none;"></span></span><span>Уведомления</span></button>
+        <button class="nav-item" data-screen="settings"><span class="ic">⚙️</span><span>Ещё</span></button>
+      </nav>
+    </div>
+  </div>
+</div>
+
+<div id="toast"></div>
+<div id="modal-bg" onclick="if(event.target===this)closeModal();"><div id="modal"></div></div>
+<div id="onboard-bg"><div id="onboard-card"></div></div>
+<div id="site-view-bg"><div id="site-view"></div></div>
+
+<script src="script-apps.js"></script>
+</body>
+</html>

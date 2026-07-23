@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>EMPIRE — выбор режима</title>
+<style>
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent;}
+  html,body{height:100%;}
+  body{
+    margin:0;min-height:100vh;overflow-x:hidden;
+    font-family:'Inter','-apple-system',BlinkMacSystemFont,system-ui,sans-serif;
+    background:#07070b;color:#f2f3f6;
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:28px 20px 34px;position:relative;
+  }
+  ::-webkit-scrollbar{width:0;height:0;}
+
+  #bg-blobs{position:fixed;inset:0;z-index:0;overflow:hidden;pointer-events:none;}
+  .blob{position:absolute;border-radius:50%;filter:blur(70px);opacity:.5;}
+  .blob.b1{width:340px;height:340px;background:#0a84ff;top:-120px;left:-90px;animation:drift1 16s ease-in-out infinite;}
+  .blob.b2{width:300px;height:300px;background:#7c5cff;bottom:-110px;right:-80px;animation:drift2 19s ease-in-out infinite;}
+  .blob.b3{width:220px;height:220px;background:#bf5af2;bottom:20%;left:-100px;animation:drift1 22s ease-in-out infinite reverse;}
+  @keyframes drift1{0%,100%{transform:translate(0,0);}50%{transform:translate(40px,30px);}}
+  @keyframes drift2{0%,100%{transform:translate(0,0);}50%{transform:translate(-30px,-40px);}}
+
+  #hub{position:relative;z-index:1;width:100%;max-width:380px;display:flex;flex-direction:column;align-items:center;text-align:center;}
+
+  .hub-logo{
+    width:84px;height:84px;border-radius:24px;margin-bottom:14px;
+    background:linear-gradient(150deg,#0a84ff,#7c5cff,#bf5af2);background-size:220% 220%;
+    display:flex;align-items:center;justify-content:center;font-size:38px;position:relative;overflow:hidden;
+    box-shadow:0 20px 46px rgba(124,92,255,.45), inset 0 1px 0 rgba(255,255,255,.3), inset 0 -10px 20px rgba(0,0,0,.2);
+    animation:hub-float 5s ease-in-out infinite, hub-shift 8s ease infinite;
+  }
+  .hub-logo::after{
+    content:'';position:absolute;top:-45%;left:-25%;width:150%;height:85%;
+    background:linear-gradient(160deg,rgba(255,255,255,.35),transparent 60%);transform:rotate(-12deg);
+  }
+  @keyframes hub-float{0%,100%{transform:translateY(0);}50%{transform:translateY(-9px);}}
+  @keyframes hub-shift{0%,100%{background-position:0% 50%;}50%{background-position:100% 50%;}}
+
+  .hub-title{
+    font-size:28px;font-weight:800;letter-spacing:.5px;margin:0 0 6px;
+    background:linear-gradient(90deg,#fff,#8fd3ff,#c9b2ff,#fff);background-size:300% auto;
+    -webkit-background-clip:text;background-clip:text;color:transparent;animation:hub-shine 5s linear infinite;
+  }
+  @keyframes hub-shine{0%{background-position:0% 50%;}100%{background-position:300% 50%;}}
+  .hub-tag{font-size:12.5px;color:rgba(242,243,246,.55);margin-bottom:30px;letter-spacing:.3px;}
+
+  .mode-list{display:flex;flex-direction:column;gap:14px;width:100%;}
+  .mode-card{
+    display:flex;align-items:center;gap:14px;width:100%;text-align:left;
+    background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.09);
+    border-radius:22px;padding:16px;cursor:pointer;font-family:inherit;color:inherit;
+    backdrop-filter:blur(20px) saturate(160%);transition:transform .15s, border-color .15s, background .15s;
+    position:relative;overflow:hidden;
+  }
+  .mode-card:active{transform:scale(.97);}
+  .mode-card.sites{border-color:rgba(10,132,255,.35);}
+  .mode-card.sites:hover{background:rgba(10,132,255,.1);}
+  .mode-card.apps{border-color:rgba(124,92,255,.35);}
+  .mode-card.apps:hover{background:rgba(124,92,255,.1);}
+  .mode-card.soon{opacity:.55;cursor:default;}
+  .mode-card.soon:active{transform:none;}
+
+  .mode-icon{
+    width:52px;height:52px;border-radius:16px;flex-shrink:0;font-size:24px;
+    display:flex;align-items:center;justify-content:center;
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.25), 0 6px 16px rgba(0,0,0,.25);
+  }
+  .mode-card.sites .mode-icon{background:linear-gradient(155deg,#0a84ff,#5ec2ff);}
+  .mode-card.apps .mode-icon{background:linear-gradient(155deg,#7c5cff,#b794f6);}
+  .mode-card.soon .mode-icon{background:rgba(255,255,255,.08);}
+
+  .mode-info{flex:1;min-width:0;}
+  .mode-name{font-weight:800;font-size:15px;}
+  .mode-sub{font-size:11.5px;color:rgba(242,243,246,.55);margin-top:2px;}
+  .mode-status{font-size:10.5px;font-weight:700;margin-top:6px;padding:3px 9px;border-radius:12px;display:inline-block;}
+  .mode-card.sites .mode-status{background:rgba(10,132,255,.18);color:#5ec2ff;}
+  .mode-card.apps .mode-status{background:rgba(124,92,255,.18);color:#c9b2ff;}
+  .mode-arrow{font-size:15px;color:rgba(242,243,246,.35);flex-shrink:0;}
+
+  .hub-foot{margin-top:26px;font-size:10.5px;color:rgba(242,243,246,.35);}
+</style>
+</head>
+<body>
+
+<div id="bg-blobs"><div class="blob b1"></div><div class="blob b2"></div><div class="blob b3"></div></div>
+
+<div id="hub">
+  <div class="hub-logo">👑</div>
+  <div class="hub-title">EMPIRE</div>
+  <div class="hub-tag">Выберите свою империю — прогресс каждого режима сохраняется отдельно</div>
+
+  <div class="mode-list">
+    <button class="mode-card sites" onclick="enterMode('sites')">
+      <div class="mode-icon">🌐</div>
+      <div class="mode-info">
+        <div class="mode-name">WEB EMPIRE</div>
+        <div class="mode-sub">Цифровая империя сайтов</div>
+        <div class="mode-status" id="status-sites">Новая игра</div>
+      </div>
+      <div class="mode-arrow">›</div>
+    </button>
+
+    <button class="mode-card apps" onclick="enterMode('apps')">
+      <div class="mode-icon">📱</div>
+      <div class="mode-info">
+        <div class="mode-name">APP EMPIRE</div>
+        <div class="mode-sub">Империя мобильных приложений</div>
+        <div class="mode-status" id="status-apps">Новая игра</div>
+      </div>
+      <div class="mode-arrow">›</div>
+    </button>
+
+    <div class="mode-card soon">
+      <div class="mode-icon">🧠</div>
+      <div class="mode-info">
+        <div class="mode-name">NEURAL EMPIRE</div>
+        <div class="mode-sub">Империя нейросетей — скоро появится</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hub-foot">v1.0 · выбранный режим откроется в своём разделе</div>
+</div>
+
+<script>
+  // Each mode keeps its own save under its own key, in its own file — this
+  // hub only reads them (never writes) to show "продолжить" vs "новая игра".
+  const SAVE_KEYS = { sites:'webempire-save-v2', apps:'appempire-save-v1' };
+  const MODE_FILES = { sites:'sites.html', apps:'apps.html' };
+
+  function describeSave(mode){
+    try{
+      const raw = localStorage.getItem(SAVE_KEYS[mode]);
+      if(!raw) return 'Новая игра';
+      const s = JSON.parse(raw);
+      if(!s || !s.setupDone) return 'Новая игра';
+      const name = (s.ceoName || 'Игрок').toString().slice(0,18);
+      const day = s.day || 1;
+      return `Продолжить · CEO ${name} · День ${day}`;
+    }catch(e){ return 'Новая игра'; }
+  }
+
+  function renderStatuses(){
+    document.getElementById('status-sites').textContent = describeSave('sites');
+    document.getElementById('status-apps').textContent = describeSave('apps');
+  }
+
+  function enterMode(mode){
+    location.href = MODE_FILES[mode];
+  }
+
+  renderStatuses();
+</script>
+
+</body>
+</html>
